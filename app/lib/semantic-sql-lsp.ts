@@ -124,7 +124,7 @@ export const handleMessage = (
   }
 
   if (request.method === "textDocument/codeAction") {
-    const { textDocument, range, context } = request.params;
+    const { range, context } = request.params;
 
     // Find the diagnostic in the context
     const diagnostic = context.diagnostics.find((diag) =>
@@ -265,11 +265,18 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
   const fromRegex = /\bFROM\b\s+([a-zA-Z_][a-zA-Z0-9_]+)/i;
   const joinConditionRegex = /ON\s+(.*)/i;
 
+  const normalizeSql = (sql: string): string =>
+    sql.replace(/\s+/g, " ").trim().replace(/;$/, "");
+  const resolveSqlTemplate = (template: string): string =>
+    template.replace(
+      /\$\{([a-zA-Z_][a-zA-Z0-9_]+)\}/g,
+      (match, group) => group
+    );
+
   lines.forEach((line, lineIndex) => {
-    // Remove leading and trailing whitespace
     const trimmedLine = line.trim();
 
-    // Skip commented lines
+    // Skip comments
     if (
       trimmedLine.startsWith("--") ||
       trimmedLine.startsWith("#") ||
@@ -277,8 +284,6 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
     ) {
       return;
     }
-
-    let match;
 
     // Check for unknown tables in FROM clauses
     const fromMatch = fromRegex.exec(trimmedLine);
@@ -293,7 +298,7 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
               character: fromMatch.index + tableName.length,
             },
           },
-          severity: 1, // 1 = Error
+          severity: 1,
           message: `Unknown table: '${tableName}'`,
           source: "mock-sql-lsp",
         });
@@ -313,40 +318,40 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
               character: joinMatch.index + tableName.length,
             },
           },
-          severity: 1, // 1 = Error
+          severity: 1,
           message: `Unknown table: '${tableName}'`,
           source: "mock-sql-lsp",
         });
       }
     }
 
-    // Check join conditions
-    if (joinMatch) {
+    // Validate join conditions
+    if (joinMatch && knownTables.includes(joinMatch[1])) {
       const tableName = joinMatch[1];
       const conditionMatch = joinConditionRegex.exec(trimmedLine);
 
       if (conditionMatch && metadata[tableName]) {
-        const condition = conditionMatch[1];
+        const condition = normalizeSql(conditionMatch[1]);
         const expectedJoins = Object.entries(metadata).flatMap(
           ([cubeName, details]) =>
-            Object.entries(details.joins || {})
-              .filter(([joinName]) => joinName === tableName)
-              .map(([joinName, joinDetails]) => ({
-                table: cubeName,
-                condition: joinDetails.sql,
-              }))
+            Object.entries(details.joins || {}).flatMap(
+              ([joinName, joinDetails]) =>
+                joinName === tableName
+                  ? resolveSqlTemplate(joinDetails.sql)
+                  : []
+            )
         );
 
-        if (!expectedJoins.some((join) => condition.includes(join.condition))) {
+        if (!expectedJoins.includes(condition)) {
           diagnostics.push({
             range: {
-              start: { line: lineIndex, character: conditionMatch.index },
+              start: { line: lineIndex, character: conditionMatch.index + 3 },
               end: {
                 line: lineIndex,
-                character: conditionMatch.index + condition.length,
+                character: conditionMatch.index + condition.length + 3,
               },
             },
-            severity: 2, // 2 = Warning
+            severity: 2,
             message: `Join condition does not match the specified relationship for '${tableName}'.`,
             source: "mock-sql-lsp",
             data: {
