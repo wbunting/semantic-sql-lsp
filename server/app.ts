@@ -4,7 +4,7 @@ import express from "express";
 
 declare module "react-router" {
   interface AppLoadContext {
-    VALUE_FROM_EXPRESS: string;
+    VALUE_FROM_VERCEL: string;
   }
 }
 
@@ -16,7 +16,7 @@ app.use(
     build: () => import("virtual:react-router/server-build"),
     getLoadContext() {
       return {
-        VALUE_FROM_EXPRESS: "Hello from Express",
+        VALUE_FROM_VERCEL: "Hello from Vercel",
       };
     },
   })
