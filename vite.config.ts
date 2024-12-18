@@ -6,11 +6,21 @@ import importMetaUrlPlugin from "@codingame/esbuild-import-meta-url-plugin";
 import vsixPlugin from "@codingame/monaco-vscode-rollup-vsix-plugin";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild, command }) => ({
+  build: {
+    rollupOptions: isSsrBuild
+      ? {
+          input: "./server/app.ts",
+        }
+      : undefined,
+  },
   css: {
     postcss: {
       plugins: [tailwindcss, autoprefixer],
     },
+  },
+  ssr: {
+    noExternal: command === "build" ? true : undefined,
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -22,4 +32,4 @@ export default defineConfig({
   worker: {
     format: "es",
   },
-});
+}));
