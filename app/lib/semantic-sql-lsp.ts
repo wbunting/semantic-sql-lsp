@@ -6,7 +6,7 @@ const cubeMetadata = parseCubeSchemas(cubeSchemas);
 export const handleMessage = (
   message: string,
   fileContents: Record<string, string>
-): string => {
+): string | null => {
   const request = JSON.parse(message);
   console.log("Server received:", request);
 
@@ -24,6 +24,25 @@ export const handleMessage = (
       },
     });
     return response;
+  }
+
+  if (request.method === "initialized") {
+    console.log("LSP initialized.");
+    return null; // Notifications don't expect a response
+  }
+
+  if (request.method === "$/cancelRequest") {
+    const { id } = request.params;
+    console.log(`Request cancellation received for id: ${id}`);
+    // Optionally: Implement cancellation logic here if you support request cancellation
+    return null; // No response is needed for notifications
+  }
+
+  if (request.method === "$/setTrace") {
+    const { value } = request.params;
+    console.log(`Set trace level to: ${value}`);
+    // Optionally: Implement trace level adjustments here
+    return null; // No response is needed for notifications
   }
 
   if (request.method === "textDocument/didOpen") {
@@ -247,10 +266,22 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
   const joinConditionRegex = /ON\s+(.*)/i;
 
   lines.forEach((line, lineIndex) => {
+    // Remove leading and trailing whitespace
+    const trimmedLine = line.trim();
+
+    // Skip commented lines
+    if (
+      trimmedLine.startsWith("--") ||
+      trimmedLine.startsWith("#") ||
+      trimmedLine.startsWith("/*")
+    ) {
+      return;
+    }
+
     let match;
 
     // Check for unknown tables in FROM clauses
-    const fromMatch = fromRegex.exec(line);
+    const fromMatch = fromRegex.exec(trimmedLine);
     if (fromMatch) {
       const tableName = fromMatch[1];
       if (!knownTables.includes(tableName)) {
@@ -270,7 +301,7 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
     }
 
     // Check for unknown tables in JOIN clauses
-    const joinMatch = joinRegex.exec(line);
+    const joinMatch = joinRegex.exec(trimmedLine);
     if (joinMatch) {
       const tableName = joinMatch[1];
       if (!knownTables.includes(tableName)) {
@@ -292,7 +323,7 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
     // Check join conditions
     if (joinMatch) {
       const tableName = joinMatch[1];
-      const conditionMatch = joinConditionRegex.exec(line);
+      const conditionMatch = joinConditionRegex.exec(trimmedLine);
 
       if (conditionMatch && metadata[tableName]) {
         const condition = conditionMatch[1];
