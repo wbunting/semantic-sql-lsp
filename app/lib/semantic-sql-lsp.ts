@@ -1,4 +1,5 @@
 import { cubeSchemas } from "./test-schemas";
+import _ from "lodash";
 
 const cubeMetadata = parseCubeSchemas(cubeSchemas);
 
@@ -8,6 +9,22 @@ export const handleMessage = (
 ): string => {
   const request = JSON.parse(message);
   console.log("Server received:", request);
+
+  if (request.method === "initialize") {
+    const response = JSON.stringify({
+      jsonrpc: "2.0",
+      id: request.id,
+      result: {
+        capabilities: {
+          textDocumentSync: 1,
+          completionProvider: { resolveProvider: true },
+          hoverProvider: true,
+          codeActionProvider: true, // Advertise codeAction capability here
+        },
+      },
+    });
+    return response;
+  }
 
   if (request.method === "textDocument/didOpen") {
     const { textDocument } = request.params;
@@ -85,6 +102,38 @@ export const handleMessage = (
       },
     });
     return response;
+  }
+
+  if (request.method === "textDocument/codeAction") {
+    const { textDocument, range, context } = request.params;
+
+    // Find the diagnostic in the context
+    const diagnostic = context.diagnostics.find((diag) =>
+      _.isEqual(diag.range, range)
+    );
+    if (
+      diagnostic &&
+      diagnostic.data &&
+      diagnostic.data.actionType === "triggerReactUI"
+    ) {
+      const response = JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: [
+          {
+            title: `Open React UI for ${diagnostic.data.tableName}`,
+            kind: "quickfix",
+            command: {
+              title: "Trigger React UI",
+              command: "mock-sql-lsp.triggerReactUI",
+              arguments: [diagnostic.data.tableName],
+            },
+          },
+        ],
+      });
+      return response;
+    }
+    return null;
   }
 
   if (request.method === "initialize") {
@@ -269,6 +318,10 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
             severity: 2, // 2 = Warning
             message: `Join condition does not match the specified relationship for '${tableName}'.`,
             source: "mock-sql-lsp",
+            data: {
+              actionType: "triggerReactUI",
+              tableName: tableName,
+            },
           });
         }
       }

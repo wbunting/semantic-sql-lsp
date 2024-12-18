@@ -1,7 +1,21 @@
-import { Suspense, lazy } from "react";
+import React, { Suspense, lazy } from "react";
 const EditorWrapper = lazy(() => import("~/components/monaco-editor-wrapped"));
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "~/components/ui/sheet";
 
 export function App() {
+  const [dialogOpen, setDialogOpen] = React.useState(false);
+
+  const handleOpenQuickFix = React.useCallback(() => {
+    setDialogOpen(true);
+  }, []);
+
   return (
     <html lang="en">
       <head>
@@ -23,13 +37,24 @@ export function App() {
                 </div>
                 <main className="flex w-full">
                   <Suspense fallback={<div>Loading Editor...</div>}>
-                    <EditorWrapper />
+                    <EditorWrapper handleOpenQuickFix={handleOpenQuickFix} />
                   </Suspense>
                 </main>
               </div>
             </section>
           </div>
         </div>
+        <Sheet open={dialogOpen} onOpenChange={(next) => setDialogOpen(next)}>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Are you absolutely sure?</SheetTitle>
+              <SheetDescription>
+                This action cannot be undone. This will permanently delete your
+                account and remove your data from our servers.
+              </SheetDescription>
+            </SheetHeader>
+          </SheetContent>
+        </Sheet>
       </body>
     </html>
   );

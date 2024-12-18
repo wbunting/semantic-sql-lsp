@@ -3,6 +3,7 @@ import { Server } from "mock-socket";
 import { MonacoEditorReactComp } from "~/components/wrapper-react";
 import getKeybindingsServiceOverride from "@codingame/monaco-vscode-keybindings-service-override";
 import "@codingame/monaco-vscode-sql-default-extension";
+import * as vscode from "vscode";
 import { LogLevel } from "vscode/services";
 import { WrapperConfig } from "monaco-editor-wrapper";
 import { configureMonacoWorkers } from "~/lib/utils";
@@ -23,7 +24,7 @@ join product_categories on products.product_category_id = product_categories.id`
 let mockServerInstance: Server | null = null;
 const mockServerUrl = "ws://localhost:30000";
 
-export const buildSQLClientUserConfig = (): WrapperConfig => {
+export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
   return {
     $type: "extended",
     logLevel: LogLevel.Debug,
@@ -33,8 +34,8 @@ export const buildSQLClientUserConfig = (): WrapperConfig => {
       },
       userConfiguration: {
         json: JSON.stringify({
-          // "workbench.colorTheme": "Default Dark Modern",
-          "workbench.colorTheme": "GitHub Dark High Contrast",
+          "workbench.colorTheme": "Default Dark Modern",
+          // "workbench.colorTheme": "GitHub Dark High Contrast",
           "editor.guides.bracketPairsHorizontal": "active",
           "editor.lightbulb.enabled": "On",
           "editor.wordBasedSuggestions": "off",
@@ -71,6 +72,14 @@ export const buildSQLClientUserConfig = (): WrapperConfig => {
             startOptions: {
               onCall: () => {
                 console.log("Connected to socket.");
+                setTimeout(() => {
+                  vscode.commands.registerCommand(
+                    "mock-sql-lsp.triggerReactUI",
+                    (...args: unknown[]) => {
+                      handleOpenQuickFix();
+                    }
+                  );
+                }, 250);
               },
               reportStatus: true,
             },
@@ -87,7 +96,7 @@ export const buildSQLClientUserConfig = (): WrapperConfig => {
   };
 };
 
-const MonacoEditor = () => {
+const MonacoEditor = React.memo(({ handleOpenQuickFix }) => {
   React.useEffect(() => {
     if (!mockServerInstance) {
       createMockServer(mockServerUrl);
@@ -96,11 +105,11 @@ const MonacoEditor = () => {
 
   return (
     <MonacoEditorReactComp
-      wrapperConfig={buildSQLClientUserConfig()}
+      wrapperConfig={buildSQLClientUserConfig(handleOpenQuickFix)}
       className="w-[50vw] h-[calc(100vh-64px)]"
     />
   );
-};
+});
 
 function createMockServer(url: string) {
   if (!mockServerInstance) {
