@@ -26,6 +26,9 @@ dependencies:
   '@codingame/monaco-vscode-sql-default-extension':
     specifier: ^11.1.2
     version: 11.1.2
+  '@codingame/monaco-vscode-textmate-service-override':
+    specifier: ^11.1.2
+    version: 11.1.2
   '@react-router/node':
     specifier: ^7.0.2
     version: 7.0.2(react-router@7.0.2)(typescript@5.7.2)

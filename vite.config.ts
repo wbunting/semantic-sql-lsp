@@ -19,4 +19,7 @@ export default defineConfig({
     include: ["vscode-textmate", "vscode-oniguruma"],
   },
   plugins: [reactRouter(), tsconfigPaths(), vsixPlugin()],
+  worker: {
+    format: "es",
+  },
 });
