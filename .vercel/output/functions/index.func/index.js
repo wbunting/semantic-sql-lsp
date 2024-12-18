@@ -1,4 +1,4 @@
-import { f } from "./assets/app-CVIIP3bY.js";
+import { f } from "./assets/app-BSiV9GPs.js";
 import "fs";
 import "path";
 import "stream";
