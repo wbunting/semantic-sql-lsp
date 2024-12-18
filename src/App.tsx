@@ -47,10 +47,10 @@ export function App() {
         <Sheet open={dialogOpen} onOpenChange={(next) => setDialogOpen(next)}>
           <SheetContent>
             <SheetHeader>
-              <SheetTitle>Are you absolutely sure?</SheetTitle>
+              <SheetTitle>Add join to semantic definition?</SheetTitle>
               <SheetDescription>
-                This action cannot be undone. This will permanently delete your
-                account and remove your data from our servers.
+                TODO: put some UX here for modifying the semantic layer based on
+                the quickfix join.
               </SheetDescription>
             </SheetHeader>
           </SheetContent>
