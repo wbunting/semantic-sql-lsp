@@ -9,7 +9,7 @@ import { WrapperConfig } from "monaco-editor-wrapper";
 import { configureMonacoWorkers } from "~/lib/utils";
 import { handleMessage } from "~/lib/semantic-sql-lsp";
 
-const text = `-- Demo of a Semanticaly aware SQL LSP
+const text = `-- Demo of a Semantically aware SQL LSP
 
 -- Known bug: syntax highlighting is off until you edit the text
 
