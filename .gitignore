@@ -6,3 +6,4 @@
 /build/
 .vercel/output
 /dist/
+build/
