@@ -7,3 +7,6 @@
 .vercel/output
 /dist/
 build/
+
+.virtual_documents/
+.ipynb_checkpoints/
