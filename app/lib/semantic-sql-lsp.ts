@@ -1,11 +1,9 @@
-import { cubeSchemas } from "./test-schemas";
 import _ from "lodash";
-
-const cubeMetadata = parseCubeSchemas(cubeSchemas);
 
 export const handleMessage = (
   message: string,
-  fileContents: Record<string, string>
+  fileContents: Record<string, string>,
+  cubeMetadata: any
 ): string | null => {
   const request = JSON.parse(message);
   console.log("Server received:", request);
@@ -140,7 +138,7 @@ export const handleMessage = (
         id: request.id,
         result: [
           {
-            title: `Open React UI for ${diagnostic.data.tableName}`,
+            title: `Edit Semantics for ${diagnostic.data.tableName}`,
             kind: "quickfix",
             command: {
               title: "Trigger React UI",
@@ -172,19 +170,6 @@ export const handleMessage = (
 
   throw new Error(`unhandled method ${request.method}`);
 };
-
-function parseCubeSchemas(cubeSchemas: any[]): any {
-  const metadata: Record<string, any> = {};
-  cubeSchemas.forEach((cube) => {
-    metadata[cube.cubeName] = {
-      dimensions: cube.dimensions,
-      measures: cube.measures,
-      joins: cube.joins,
-      segments: cube.segments,
-    };
-  });
-  return metadata;
-}
 
 function generateCubeCompletions(metadata: any): any[] {
   const completions: any[] = [];

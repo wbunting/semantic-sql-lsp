@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { handleMessage } from "./semantic-sql-lsp";
+import { cubeSchemas } from "./test-schemas";
+import { parseCubeSchemas } from "./utils";
 
 describe("SQL LSP Tests", () => {
+  const cubeMetadata = parseCubeSchemas(cubeSchemas);
+
   it("should initialize with the correct capabilities", () => {
     const message = JSON.stringify({
       jsonrpc: "2.0",
@@ -10,7 +14,7 @@ describe("SQL LSP Tests", () => {
       params: {},
     });
 
-    const response = handleMessage(message, {});
+    const response = handleMessage(message, {}, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -41,7 +45,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents);
+    const response = handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -71,7 +75,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents);
+    const response = handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -97,7 +101,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents);
+    const response = handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -115,7 +119,7 @@ describe("SQL LSP Tests", () => {
       params: {},
     });
 
-    const response = handleMessage(message, {});
+    const response = handleMessage(message, {}, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 

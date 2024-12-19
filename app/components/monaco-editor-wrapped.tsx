@@ -1,5 +1,4 @@
 import React from "react";
-import { Server } from "mock-socket";
 import { MonacoEditorReactComp } from "~/components/wrapper-react";
 import getKeybindingsServiceOverride from "@codingame/monaco-vscode-keybindings-service-override";
 import "@codingame/monaco-vscode-sql-default-extension";
@@ -7,7 +6,6 @@ import * as vscode from "vscode";
 import { LogLevel } from "vscode/services";
 import { WrapperConfig } from "monaco-editor-wrapper";
 import { configureMonacoWorkers } from "~/lib/utils";
-import { handleMessage } from "~/lib/semantic-sql-lsp";
 
 const text = `-- Demo of a Semantically aware SQL LSP
 
@@ -26,7 +24,6 @@ select *
 from products
 join product_categories on products.product_category_id = product_categories.id`;
 
-let mockServerInstance: Server | null = null;
 const mockServerUrl = "ws://localhost:30000";
 
 export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
@@ -44,7 +41,7 @@ export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
           "editor.lightbulb.enabled": "On",
           "editor.wordBasedSuggestions": "off",
           "editor.experimental.asyncTokenization": true,
-          "editor.fontSize": 16,
+          "editor.fontSize": 12,
           "editor.minimap.enabled": false,
           "editor.lineNumbersMinChars": 0,
           "editor.scrollBeyondLastLine": false,
@@ -101,41 +98,12 @@ export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
 };
 
 const MonacoEditor = React.memo(({ handleOpenQuickFix }) => {
-  React.useEffect(() => {
-    if (!mockServerInstance) {
-      createMockServer(mockServerUrl);
-    }
-  }, []);
-
   return (
     <MonacoEditorReactComp
       wrapperConfig={buildSQLClientUserConfig(handleOpenQuickFix)}
-      className="w-[50vw] h-[calc(100vh-64px)]"
+      className="h-[calc(100vh-64px)] w-[700px]"
     />
   );
 });
-
-function createMockServer(url: string) {
-  if (!mockServerInstance) {
-    mockServerInstance = new Server(url);
-
-    const fileContents: Record<string, string> = {};
-
-    mockServerInstance.on("connection", (socket) => {
-      console.log("Mock WebSocket server: connection established");
-
-      socket.on("message", (message) => {
-        const response = handleMessage(message as string, fileContents);
-        if (response) {
-          socket.send(response);
-        }
-      });
-    });
-
-    console.log("Mock WebSocket server running:", url);
-  } else {
-    console.log("Mock server already running.");
-  }
-}
 
 export default MonacoEditor;
