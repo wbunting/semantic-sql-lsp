@@ -15,8 +15,9 @@ WORKDIR /app
 RUN npm install -g pnpm && pnpm run build
 
 FROM node:20-alpine
-COPY ./package.json pnpm-lock.yaml /app/
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
 COPY --from=production-dependencies-env /app/node_modules /app/node_modules
 COPY --from=build-env /app/build /app/build
-WORKDIR /app
+RUN npm install -g pnpm
 CMD ["pnpm", "start"]
