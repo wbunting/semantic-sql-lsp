@@ -119,66 +119,19 @@ function AppSidebar({ activeTable, setActiveTable, ...props }) {
   );
 }
 
-let mockServerInstance: Server | null = null;
-const mockServerUrl = "ws://localhost:30000";
-let mockServerMeta: any;
-
-function createMockServer(url: string, initSchema: any) {
-  if (!mockServerInstance) {
-    mockServerInstance = new Server(url);
-
-    const fileContents: Record<string, string> = {};
-    mockServerMeta = parseCubeSchemas(initSchema);
-
-    mockServerInstance.on("connection", (socket) => {
-      console.log("Mock WebSocket server: connection established");
-
-      socket.on("message", (message) => {
-        // special non LSP message to update the schemas (just for mocking)
-        const request = JSON.parse(message);
-        if (request.method === "update-schema") {
-          const { schemas } = request.params;
-          mockServerMeta = parseCubeSchemas(schemas);
-          return;
-        }
-
-        const response = handleMessage(
-          message as string,
-          fileContents,
-          mockServerMeta
-        );
-        if (response) {
-          socket.send(response);
-        }
-      });
-    });
-
-    console.log("Mock WebSocket server running:", url);
-  } else {
-    console.log("Mock server already running.");
-  }
-}
-
 export function Home() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [activeTable, setActiveTable] = React.useState("products");
   const [schemas, setSchemas] = React.useState(cubeSchemas);
   React.useEffect(() => {
-    if (!mockServerInstance) {
-      createMockServer(mockServerUrl, cubeSchemas);
-    }
-  }, []);
-  React.useEffect(() => {
-    if (mockServerInstance) {
-      const socket = new WebSocket(mockServerUrl);
-      socket.onopen = () => {
-        const message = JSON.stringify({
-          method: "update-schema",
-          params: { schemas },
-        });
-        socket.send(message);
-      };
-    }
+    const socket = new WebSocket("ws://localhost:3000");
+    socket.onopen = () => {
+      const message = JSON.stringify({
+        method: "update-schema",
+        params: { schemas },
+      });
+      socket.send(message);
+    };
   }, [schemas]);
 
   const handleOpenQuickFix = React.useCallback(() => {

@@ -25,7 +25,7 @@ select *
 from products
 join product_categories on products.product_category_id = product_categories.id`;
 
-const mockServerUrl = "ws://localhost:30000";
+const mockServerUrl = "ws://localhost:3000";
 
 var ls = languageServer({
   // WebSocket server uri and other client options.

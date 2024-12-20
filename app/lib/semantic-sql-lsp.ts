@@ -1,11 +1,41 @@
 import _ from "lodash";
 
+type CubeMetadata = {
+  [cubeName: string]: {
+    dimensions: {
+      [dimensionName: string]: {
+        type: string;
+      };
+    };
+    measures: {
+      [measureName: string]: {
+        type: string;
+      };
+    };
+    joins: {
+      [joinName: string]: {
+        sql: string;
+      };
+    };
+    segments?: {
+      [segmentName: string]: any;
+    };
+  };
+};
+
+type LspRequest = {
+  jsonrpc: string;
+  id?: number | string; // Notifications don't have an ID
+  method: string;
+  params?: any; // Adjust this to stricter types if needed
+};
+
 export const handleMessage = (
   message: string,
   fileContents: Record<string, string>,
-  cubeMetadata: any
+  cubeMetadata: CubeMetadata
 ): string | null => {
-  const request = JSON.parse(message);
+  const request: LspRequest = JSON.parse(message);
   console.log("Server received:", request);
 
   if (request.method === "initialize") {
@@ -125,7 +155,7 @@ export const handleMessage = (
     const { range, context } = request.params;
 
     // Find the diagnostic in the context
-    const diagnostic = context.diagnostics.find((diag) =>
+    const diagnostic = context.diagnostics.find((diag: any) =>
       _.isEqual(diag.range, range)
     );
     if (
@@ -171,7 +201,7 @@ export const handleMessage = (
   throw new Error(`unhandled method ${request.method}`);
 };
 
-function generateCubeCompletions(metadata: any): any[] {
+function generateCubeCompletions(metadata: CubeMetadata): any[] {
   const completions: any[] = [];
 
   Object.entries(metadata).forEach(([cubeName, details]) => {
@@ -219,23 +249,24 @@ function generateCubeCompletions(metadata: any): any[] {
 
 function generateCubeHoverContent(word: string, metadata: any): string {
   for (const [cubeName, details] of Object.entries(metadata)) {
+    const cubeDetails = details as CubeMetadata[string];
     if (word === cubeName) {
       return (
         `**Cube: ${cubeName}**\n\n` +
-        Object.entries(details.dimensions)
+        Object.entries(cubeDetails.dimensions)
           .map(([key, value]) => `- Dimension: ${key} (${value.type})`)
           .join("\n") +
         "\n" +
-        Object.entries(details.measures)
+        Object.entries(cubeDetails.measures)
           .map(([key, value]) => `- Measure: ${key} (${value.type})`)
           .join("\n")
       );
     }
-    if (details.dimensions[word]) {
-      return `**Dimension: ${word}**\n\nType: ${details.dimensions[word].type}`;
+    if (cubeDetails.dimensions[word]) {
+      return `**Dimension: ${word}**\n\nType: ${cubeDetails.dimensions[word].type}`;
     }
-    if (details.measures[word]) {
-      return `**Measure: ${word}**\n\nType: ${details.measures[word].type}`;
+    if (cubeDetails.measures[word]) {
+      return `**Measure: ${word}**\n\nType: ${cubeDetails.measures[word].type}`;
     }
   }
   return "No information available";
@@ -319,11 +350,10 @@ function analyzeCubeSql(sql: string, metadata: any): any[] {
         const condition = normalizeSql(conditionMatch[1]);
         const expectedJoins = Object.entries(metadata).flatMap(
           ([cubeName, details]) =>
-            Object.entries(details.joins || {}).flatMap(
-              ([joinName, joinDetails]) =>
-                joinName === tableName
-                  ? resolveSqlTemplate(joinDetails.sql)
-                  : []
+            Object.entries(
+              (details as CubeMetadata[string]).joins || {}
+            ).flatMap(([joinName, joinDetails]) =>
+              joinName === tableName ? resolveSqlTemplate(joinDetails.sql) : []
             )
         );
 

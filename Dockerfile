@@ -22,4 +22,4 @@ COPY --from=build-env /app/build /app/build
 COPY . .
 RUN npm install -g pnpm
 RUN pnpm install compression morgan
-CMD ["pnpm", "start"]
+CMD ["pnpm", "run", "dev"]
