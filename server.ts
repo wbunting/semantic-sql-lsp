@@ -2,11 +2,10 @@ import compression from "compression";
 import express from "express";
 import morgan from "morgan";
 import { WebSocketServer, WebSocket } from "ws";
-import { parseCubeSchemas } from "./app/lib/lsp-utils";
-import { handleMessage } from "./app/lib/semantic-sql-lsp";
+import { parseCubeSchemas } from "./app/lib/lsp-utils.js";
+import { handleMessage } from "./app/lib/semantic-sql-lsp.js";
 
 // Short-circuit the type-checking of the built output.
-const BUILD_PATH = "./build/server/index.js";
 const DEVELOPMENT = process.env.NODE_ENV === "development";
 const PORT = Number.parseInt(process.env.PORT || "3000");
 
@@ -41,7 +40,6 @@ if (DEVELOPMENT) {
     express.static("build/client/assets", { immutable: true, maxAge: "1y" })
   );
   app.use(express.static("build/client", { maxAge: "1h" }));
-  // app.use(await import(BUILD_PATH).then((mod) => mod.app));
 }
 
 app.use(morgan("tiny"));

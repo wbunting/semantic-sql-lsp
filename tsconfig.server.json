@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020", // Modern JavaScript target
-    "module": "ESNext", // Use ESNext module system
-    "moduleResolution": "node", // Use Node.js module resolution
+    "module": "node16", // Use ESNext module system
+    "moduleResolution": "node16", // Use Node.js module resolution
     "rootDir": ".",
     "outDir": "build", // Output directory for compiled files
     "strict": false, // Enable strict type-checking
