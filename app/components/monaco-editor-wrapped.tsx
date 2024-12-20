@@ -24,8 +24,6 @@ select *
 from products
 join product_categories on products.product_category_id = product_categories.id`;
 
-const mockServerUrl = "ws://localhost:3000";
-
 export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
   return {
     $type: "extended",
@@ -69,7 +67,9 @@ export const buildSQLClientUserConfig = (handleOpenQuickFix): WrapperConfig => {
         connection: {
           options: {
             $type: "WebSocketUrl",
-            url: mockServerUrl,
+            url: `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${
+              window.location.hostname
+            }:${window.location.port}`,
             startOptions: {
               onCall: () => {
                 console.log("Connected to socket.");

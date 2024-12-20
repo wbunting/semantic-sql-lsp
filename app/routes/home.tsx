@@ -124,7 +124,10 @@ export function Home() {
   const [activeTable, setActiveTable] = React.useState("products");
   const [schemas, setSchemas] = React.useState(cubeSchemas);
   React.useEffect(() => {
-    const socket = new WebSocket("ws://localhost:3000");
+    const websocketPath = `${
+      window.location.protocol === "https:" ? "wss:" : "ws:"
+    }//${window.location.hostname}:${window.location.port}`;
+    const socket = new WebSocket(websocketPath);
     socket.onopen = () => {
       const message = JSON.stringify({
         method: "update-schema",
