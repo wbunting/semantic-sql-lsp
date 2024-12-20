@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build",
+    "build": "cross-env NODE_ENV=production react-router build",
     "typecheck": "react-router typegen && tsc",
     "dev": "cross-env NODE_ENV=development node server.js",
     "start": "node server.js",
@@ -26,6 +26,7 @@
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
     "@radix-ui/react-tooltip": "^1.1.6",
+    "@react-router/express": "^7.0.2",
     "@react-router/node": "^7.0.2",
     "@react-router/serve": "^7.0.2",
     "@typefox/monaco-editor-react": "~6.0.0-next.10",
