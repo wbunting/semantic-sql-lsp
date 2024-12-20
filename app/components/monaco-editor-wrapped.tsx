@@ -5,7 +5,7 @@ import "@codingame/monaco-vscode-sql-default-extension";
 import * as vscode from "vscode";
 import { LogLevel } from "vscode/services";
 import { WrapperConfig } from "monaco-editor-wrapper";
-import { configureMonacoWorkers } from "~/lib/utils";
+import { configureMonacoWorkers } from "~/lib/monaco-utils";
 
 const text = `-- Demo of a Semantically aware SQL LSP
 

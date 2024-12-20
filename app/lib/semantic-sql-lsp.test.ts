@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { handleMessage } from "./semantic-sql-lsp";
 import { cubeSchemas } from "./test-schemas";
-import { parseCubeSchemas } from "./utils";
+import { parseCubeSchemas } from "./lsp-utils";
 
 describe("SQL LSP Tests", () => {
   const cubeMetadata = parseCubeSchemas(cubeSchemas);

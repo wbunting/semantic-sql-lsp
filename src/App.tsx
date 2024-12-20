@@ -3,7 +3,7 @@ import React, { Suspense, lazy } from "react";
 import { Server } from "mock-socket";
 import SemanticEditor from "~/components/semantic-editor";
 import { Badge } from "~/components/ui/badge";
-const EditorWrapper = lazy(() => import("~/components/monaco-editor-wrapped"));
+// const EditorWrapper = lazy(() => import("~/components/monaco-editor-wrapped"));
 import {
   Sheet,
   SheetContent,
@@ -29,8 +29,8 @@ import {
 } from "~/components/ui/sidebar";
 import { handleMessage } from "~/lib/semantic-sql-lsp";
 import { cubeSchemas } from "~/lib/test-schemas";
-import { parseCubeSchemas } from "~/lib/utils";
-import { parse } from "path";
+import { parseCubeSchemas } from "~/lib/lsp-utils";
+import SQLEditor from "~/components/codemirror-editor";
 
 const data = {
   navMain: [
@@ -199,9 +199,10 @@ export function App() {
                     />
                   </div>
                 </div>
-                <Suspense fallback={<div>Loading Editor...</div>}>
-                  <EditorWrapper handleOpenQuickFix={handleOpenQuickFix} />
-                </Suspense>
+                <SQLEditor />
+                {/* <Suspense fallback={<div>Loading Editor...</div>}> */}
+                {/*   <EditorWrapper handleOpenQuickFix={handleOpenQuickFix} /> */}
+                {/* </Suspense> */}
               </main>
             </div>
           </section>
