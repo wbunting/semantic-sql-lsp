@@ -27,6 +27,7 @@
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-separator": "^1.1.1",
     "@radix-ui/react-slot": "^1.1.1",
+    "@radix-ui/react-tabs": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.1.6",
     "@react-router/express": "^7.0.2",
     "@react-router/node": "^7.0.2",
@@ -68,6 +69,7 @@
   "devDependencies": {
     "@react-router/dev": "^7.0.2",
     "@types/compression": "^1.7.5",
+    "@types/execa": "^2.0.2",
     "@types/express": "^5.0.0",
     "@types/lodash": "^4.17.13",
     "@types/morgan": "^1.9.9",

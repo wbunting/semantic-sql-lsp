@@ -3,6 +3,7 @@ import type { Route } from "./+types/home";
 import { GalleryVerticalEnd } from "lucide-react";
 import React, { Suspense, lazy } from "react";
 import { Server } from "mock-socket";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Badge } from "~/components/ui/badge";
 import {
   Sheet,
@@ -27,9 +28,8 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "~/components/ui/sidebar";
-import { handleMessage } from "~/lib/semantic-sql-lsp";
 import { cubeSchemas } from "~/lib/test-schemas";
-import { parseCubeSchemas } from "~/lib/lsp-utils";
+import { Button } from "~/components/ui/button";
 
 const EditorWrapper = lazy(() => import("~/components/monaco-editor-wrapped"));
 // const SQLEditor = lazy(() => import("~/components/codemirror-editor"));
@@ -143,38 +143,54 @@ export function Home() {
 
   return (
     <>
-      <SidebarProvider defaultOpen={true}>
-        <AppSidebar activeTable={activeTable} setActiveTable={setActiveTable} />
-        <SidebarInset>
-          <section className="overflow-hidden border bg-background shadow">
-            <div className="h-full flex flex-col items-start min-h-screen">
-              <div className="container flex flex-col items-start justify-between space-y-2 py-4 h-16 w-full px-10">
-                <div className="flex">
-                  <SidebarTrigger />
-                </div>
-                <div className="ml-auto flex w-full space-x-2 sm:justify-end">
-                  <div className="hidden space-x-2 md:flex"></div>
+      <section className="overflow-hidden border bg-background shadow">
+        <div className="h-full flex flex-col items-start min-h-screen">
+          <div className="container flex flex-col items-start justify-between space-y-2 py-4 h-16 w-full px-10">
+            <div className="flex">
+              <div className="flex items-center space-x-2 leading-none">
+                <span className="font-semibold">Semantic SQL Playground</span>
+                <div>
+                  <Badge>Demo</Badge>
                 </div>
               </div>
-              <main className="flex h-full w-full">
-                <div className="flex-1 flex">
-                  <div className="w-full h-full overflow-auto">
-                    <SemanticEditor
-                      schemas={schemas}
-                      setSchemas={setSchemas}
-                      activeTable={activeTable}
-                    />
-                  </div>
-                </div>
-                <Suspense fallback={<div>Loading Editor...</div>}>
-                  <EditorWrapper handleOpenQuickFix={handleOpenQuickFix} />
-                  {/* <SQLEditor /> */}
-                </Suspense>
-              </main>
             </div>
-          </section>
-        </SidebarInset>
-      </SidebarProvider>
+            <div className="ml-auto flex w-full space-x-2 sm:justify-end">
+              <div className="hidden space-x-2 md:flex"></div>
+            </div>
+          </div>
+          <main className="flex h-full w-full">
+            <div className="flex-1 flex">
+              <Tabs
+                value={activeTable}
+                onValueChange={(n) => setActiveTable(n)}
+              >
+                <TabsList className="grid w-full grid-cols-4 my-2 mx-4">
+                  {data.navMain[0].items.map((t) => (
+                    <TabsTrigger value={t.title}>{t.title}</TabsTrigger>
+                  ))}
+                </TabsList>
+                <div className="w-full h-full overflow-auto mt-4">
+                  <SemanticEditor
+                    schemas={schemas}
+                    setSchemas={setSchemas}
+                    activeTable={activeTable}
+                  />
+                </div>
+              </Tabs>
+            </div>
+            <Suspense fallback={<div>Loading Editor...</div>}>
+              <div>
+                <div className="flex space-x-2 py-2">
+                  <Button disabled>Fix With AI</Button>
+                  <Button disabled>Run</Button>
+                </div>
+                <EditorWrapper handleOpenQuickFix={handleOpenQuickFix} />
+              </div>
+              {/* <SQLEditor /> */}
+            </Suspense>
+          </main>
+        </div>
+      </section>
       <Sheet open={dialogOpen} onOpenChange={(next) => setDialogOpen(next)}>
         <SheetContent>
           <SheetHeader>

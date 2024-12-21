@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { execa } from "execa";
 
 type CubeMetadata = {
   [cubeName: string]: {
@@ -30,11 +31,11 @@ type LspRequest = {
   params?: any; // Adjust this to stricter types if needed
 };
 
-export const handleMessage = (
+export const handleMessage = async (
   message: string,
   fileContents: Record<string, string>,
   cubeMetadata: CubeMetadata
-): string | null => {
+): Promise<string | null> => {
   const request: LspRequest = JSON.parse(message);
   console.log("Server received:", request);
 
@@ -79,7 +80,7 @@ export const handleMessage = (
     console.log(`File opened: ${textDocument.uri}`);
 
     // Analyze content for errors
-    const diagnostics = analyzeCubeSql(textDocument.text, cubeMetadata);
+    const diagnostics = await analyzeCubeSql(textDocument.text, cubeMetadata);
 
     // Send diagnostics
     const response = JSON.stringify({
@@ -101,7 +102,7 @@ export const handleMessage = (
       fileContents[textDocument.uri] = newText;
 
       // Analyze content for errors
-      const diagnostics = analyzeCubeSql(newText, cubeMetadata);
+      const diagnostics = await analyzeCubeSql(newText, cubeMetadata);
 
       // Send diagnostics
       const response = JSON.stringify({
@@ -272,114 +273,233 @@ function generateCubeHoverContent(word: string, metadata: any): string {
   return "No information available";
 }
 
-function analyzeCubeSql(sql: string, metadata: any): any[] {
+async function parseSql(sql: string): Promise<any[]> {
+  try {
+    const { stdout } = await execa("./parse_sql.py", [], {
+      input: sql,
+    });
+    const result = JSON.parse(stdout);
+    return result;
+  } catch (error: any) {
+    console.error("Error calling parse_sql.py:", error.message);
+    return [];
+  }
+}
+
+async function analyzeCubeSql(sql: string, metadata: any): Promise<any[]> {
+  const parseTrees = await parseSql(sql);
+  console.log("parseTrees", JSON.stringify(parseTrees, null, 2));
+  return analyzeCubeSqlFromParseTree(parseTrees, metadata, sql);
+}
+
+function analyzeCubeSqlFromParseTree(
+  parseTrees: any[],
+  metadata: CubeMetadata,
+  sql: string
+): any[] {
   const diagnostics: any[] = [];
-  const lines = sql.split("\n");
-
   const knownTables = Object.keys(metadata);
-  const joinRegex = /\bJOIN\b\s+([a-zA-Z_][a-zA-Z0-9_]+)/i;
-  const fromRegex = /\bFROM\b\s+([a-zA-Z_][a-zA-Z0-9_]+)/i;
-  const joinConditionRegex = /ON\s+(.*)/i;
+  const assignedPositions = new Set<number>();
 
-  const normalizeSql = (sql: string): string =>
-    sql.replace(/\s+/g, " ").trim().replace(/;$/, "");
-  const resolveSqlTemplate = (template: string): string =>
-    template.replace(
-      /\$\{([a-zA-Z_][a-zA-Z0-9_]+)\}/g,
-      (match, group) => group
-    );
+  for (const tree of parseTrees) {
+    const { fromTables, joins } = findAllTablesAndJoins(tree);
 
-  lines.forEach((line, lineIndex) => {
-    const trimmedLine = line.trim();
-
-    // Skip comments
-    if (
-      trimmedLine.startsWith("--") ||
-      trimmedLine.startsWith("#") ||
-      trimmedLine.startsWith("/*")
-    ) {
-      return;
-    }
-
-    // Check for unknown tables in FROM clauses
-    const fromMatch = fromRegex.exec(trimmedLine);
-    if (fromMatch) {
-      const tableName = fromMatch[1];
-      if (!knownTables.includes(tableName)) {
+    // Check FROM tables
+    for (const from of fromTables) {
+      if (!knownTables.includes(from.name)) {
+        const range = findTextRangeForName(sql, from.name, assignedPositions);
         diagnostics.push({
-          range: {
-            start: { line: lineIndex, character: fromMatch.index },
-            end: {
-              line: lineIndex,
-              character: fromMatch.index + tableName.length,
-            },
-          },
+          range,
           severity: 1,
-          message: `Unknown table: '${tableName}'`,
+          message: `Unknown table: '${from.name}'`,
           source: "mock-sql-lsp",
         });
       }
     }
 
-    // Check for unknown tables in JOIN clauses
-    const joinMatch = joinRegex.exec(trimmedLine);
-    if (joinMatch) {
-      const tableName = joinMatch[1];
-      if (!knownTables.includes(tableName)) {
+    console.log("joins", JSON.stringify(joins, null, 2));
+    for (const joinInfo of joins) {
+      const { name: table, on } = joinInfo;
+
+      if (!knownTables.includes(table)) {
+        const range = findTextRangeForName(sql, table, assignedPositions);
         diagnostics.push({
-          range: {
-            start: { line: lineIndex, character: joinMatch.index },
-            end: {
-              line: lineIndex,
-              character: joinMatch.index + tableName.length,
-            },
-          },
+          range,
           severity: 1,
-          message: `Unknown table: '${tableName}'`,
+          message: `Unknown table: '${table}'`,
           source: "mock-sql-lsp",
         });
-      }
-    }
+      } else {
+        if (on?.class === "EQ" && on?.args?.this && on?.args?.expression) {
+          const leftColumn = `${on.args.this.args.table.args.this}.${on.args.this.args.this.args.this}`;
+          const rightColumn = `${on.args.expression.args.table.args.this}.${on.args.expression.args.this.args.this}`;
+          const joinCondition = `${leftColumn} = ${rightColumn}`;
 
-    // Validate join conditions
-    if (joinMatch && knownTables.includes(joinMatch[1])) {
-      const tableName = joinMatch[1];
-      const conditionMatch = joinConditionRegex.exec(trimmedLine);
+          const expectedJoins = getExpectedJoinsForTable(table, metadata);
+          console.log("expectedJoins", expectedJoins);
 
-      if (conditionMatch && metadata[tableName]) {
-        const condition = normalizeSql(conditionMatch[1]);
-        const expectedJoins = Object.entries(metadata).flatMap(
-          ([cubeName, details]) =>
-            Object.entries(
-              (details as CubeMetadata[string]).joins || {}
-            ).flatMap(([joinName, joinDetails]) =>
-              joinName === tableName ? resolveSqlTemplate(joinDetails.sql) : []
-            )
-        );
-
-        if (!expectedJoins.includes(condition)) {
-          diagnostics.push({
-            range: {
-              start: { line: lineIndex, character: conditionMatch.index + 3 },
-              end: {
-                line: lineIndex,
-                character: conditionMatch.index + condition.length + 3,
+          if (
+            expectedJoins.length > 0 &&
+            !expectedJoins.includes(joinCondition)
+          ) {
+            const range = findTextRangeForName(sql, table, assignedPositions);
+            diagnostics.push({
+              range,
+              severity: 2,
+              message: `Join condition does not match the specified relationship for '${table}'.`,
+              source: "mock-sql-lsp",
+              data: {
+                actionType: "triggerReactUI",
+                tableName: table,
               },
-            },
+            });
+          }
+        } else {
+          const range = findTextRangeForName(sql, table, assignedPositions);
+          diagnostics.push({
+            range,
             severity: 2,
-            message: `Join condition does not match the specified relationship for '${tableName}'.`,
+            message: `Invalid or missing join condition for '${table}'.`,
             source: "mock-sql-lsp",
-            data: {
-              actionType: "triggerReactUI",
-              tableName: tableName,
-            },
           });
         }
       }
     }
-  });
+  }
 
   return diagnostics;
+}
+
+function getExpectedJoinsForTable(
+  tableName: string,
+  metadata: CubeMetadata
+): string[] {
+  // This replicates the original logic: look for cube definitions that have a join on `tableName`
+  const expectedJoins: string[] = [];
+  for (const [cubeName, details] of Object.entries(metadata)) {
+    for (const [joinName, joinDetails] of Object.entries(details.joins || {})) {
+      if (joinName === tableName) {
+        const resolved = resolveSqlTemplate(joinDetails.sql);
+        expectedJoins.push(normalizeSql(resolved));
+      }
+    }
+  }
+  return expectedJoins;
+}
+
+function findAllTablesAndJoins(tree: any) {
+  const fromTables: { name: string; node: any }[] = [];
+  const joins: { name: string; node: any; on: any }[] = [];
+
+  // Extract FROM table node
+  const fromNode = tree?.args?.from?.args?.this;
+  if (
+    fromNode &&
+    fromNode.class === "Table" &&
+    fromNode.args?.this?.class === "Identifier"
+  ) {
+    const tableNode = fromNode.args.this; // Identifier node for the table name
+    fromTables.push({
+      name: tableNode.args.this,
+      node: tableNode,
+    });
+  }
+
+  // Extract JOIN tables
+  if (Array.isArray(tree?.args?.joins)) {
+    for (const join of tree.args.joins) {
+      const joinTableNode = join?.args?.this;
+      if (
+        joinTableNode &&
+        joinTableNode.class === "Table" &&
+        joinTableNode.args?.this?.class === "Identifier"
+      ) {
+        const tableNode = joinTableNode.args.this;
+        joins.push({
+          name: tableNode.args.this,
+          node: tableNode,
+          on: join.args.on,
+        });
+      }
+    }
+  }
+
+  return { fromTables, joins };
+}
+
+// Convert an expression node into a simple SQL string.
+// This is a simplified approach focusing on EQ, Identifier, Column, Literal.
+function expressionToSqlString(node: any): string {
+  // Handle various node types
+  switch (node.class) {
+    case "EQ": {
+      const left = expressionToSqlString(node.args.this);
+      const right = expressionToSqlString(node.args.expression);
+      return `${left} = ${right}`;
+    }
+    case "Column": {
+      // Column nodes have node.args.this as an Identifier
+      if (node.args.this?.class === "Identifier") {
+        return node.args.this.args.this;
+      }
+      return "column";
+    }
+    case "Identifier":
+      return node.args.this;
+    case "Literal":
+      return node.args.this;
+    // Add cases for other node types as needed
+    default:
+      // If we don't recognize the node type, return a generic string.
+      // You may want to expand this if you have more complex join conditions.
+      return node.class;
+  }
+}
+
+function normalizeSql(sql: string): string {
+  return sql.replace(/\s+/g, " ").trim().replace(/;$/, "");
+}
+
+function resolveSqlTemplate(template: string): string {
+  return template.replace(
+    /\$\{([a-zA-Z_][a-zA-Z0-9_]+)\}/g,
+    (match, group) => group
+  );
+}
+
+function findTextRangeForName(
+  sql: string,
+  name: string,
+  assignedPositions: Set<number>
+): {
+  start: { line: number; character: number };
+  end: { line: number; character: number };
+} {
+  let startPos = sql.indexOf(name);
+  while (startPos !== -1 && assignedPositions.has(startPos)) {
+    startPos = sql.indexOf(name, startPos + 1);
+  }
+
+  if (startPos === -1) {
+    // If not found, fallback to dummy position
+    return {
+      start: { line: 0, character: 0 },
+      end: { line: 0, character: name.length },
+    };
+  }
+
+  assignedPositions.add(startPos);
+
+  // Convert startPos to (line, column)
+  const beforeText = sql.slice(0, startPos);
+  const line = beforeText.split("\n").length - 1; // zero-based line index
+  const lastLineIndex = beforeText.lastIndexOf("\n");
+  const character = startPos - (lastLineIndex + 1);
+
+  return {
+    start: { line, character },
+    end: { line, character: character + name.length },
+  };
 }
 
 function getWordAtPosition(line: string, character: number): string {

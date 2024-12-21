@@ -56,7 +56,7 @@ const fileContents: Record<string, string> = {};
 wss.on("connection", (ws: WebSocket) => {
   console.log("WebSocket connection established");
 
-  ws.on("message", (message) => {
+  ws.on("message", async (message) => {
     try {
       const request = JSON.parse(message.toString());
 
@@ -68,12 +68,11 @@ wss.on("connection", (ws: WebSocket) => {
         return;
       }
 
-      // Process other messages
-      const response = handleMessage(
+      const response = await handleMessage(
         message.toString(),
         fileContents,
         serverMeta
-      ); // Replace with your logic
+      );
       if (response) {
         ws.send(response);
       }

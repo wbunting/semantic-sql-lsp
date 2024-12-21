@@ -6,7 +6,7 @@ import { parseCubeSchemas } from "./lsp-utils";
 describe("SQL LSP Tests", () => {
   const cubeMetadata = parseCubeSchemas(cubeSchemas);
 
-  it("should initialize with the correct capabilities", () => {
+  it("should initialize with the correct capabilities", async () => {
     const message = JSON.stringify({
       jsonrpc: "2.0",
       id: 1,
@@ -14,7 +14,7 @@ describe("SQL LSP Tests", () => {
       params: {},
     });
 
-    const response = handleMessage(message, {}, cubeMetadata);
+    const response = await handleMessage(message, {}, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -29,7 +29,7 @@ describe("SQL LSP Tests", () => {
     }
   });
 
-  it("should generate diagnostics for bad joins", () => {
+  it("should generate diagnostics for bad joins", async () => {
     const fileContents = {};
     const sql = `
     select *
@@ -45,7 +45,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents, cubeMetadata);
+    const response = await handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -59,7 +59,7 @@ describe("SQL LSP Tests", () => {
     }
   });
 
-  it("should not generate diagnostics for correct joins", () => {
+  it("should not generate diagnostics for correct joins", async () => {
     const fileContents = {};
     const sql = `
       select *
@@ -75,7 +75,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents, cubeMetadata);
+    const response = await handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -86,7 +86,7 @@ describe("SQL LSP Tests", () => {
     }
   });
 
-  it("should provide hover content for known tables", () => {
+  it("should provide hover content for known tables", async () => {
     const fileContents = {
       "test.sql": "select * from products;",
     };
@@ -101,7 +101,7 @@ describe("SQL LSP Tests", () => {
       },
     });
 
-    const response = handleMessage(message, fileContents, cubeMetadata);
+    const response = await handleMessage(message, fileContents, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
@@ -111,7 +111,7 @@ describe("SQL LSP Tests", () => {
     }
   });
 
-  it("should provide completions for cube metadata", () => {
+  it("should provide completions for cube metadata", async () => {
     const message = JSON.stringify({
       jsonrpc: "2.0",
       id: 3,
@@ -119,7 +119,7 @@ describe("SQL LSP Tests", () => {
       params: {},
     });
 
-    const response = handleMessage(message, {}, cubeMetadata);
+    const response = await handleMessage(message, {}, cubeMetadata);
     if (response) {
       const parsedResponse = JSON.parse(response);
 
